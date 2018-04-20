@@ -8,6 +8,11 @@ contract UserProfile {
   bytes16[] private usernames;
   bytes[] private ipfsHashes;
 
+  modifier indexIsAvailable(uint _index) {
+    require(_index < addresses.length);
+    _;
+  }
+
   function UserProfile() public {
     addresses.push(msg.sender);
     usernames.push('self');
@@ -48,21 +53,27 @@ contract UserProfile {
     return addresses.length;
   }
 
-  function getAddressByIndex(uint _index) public view returns (address) {
-    require(_index < addresses.length);
+  function getUserByIndex(uint _index)
+    public view indexIsAvailable(_index) returns(address, bytes16, bytes)
+  {
+    return(addresses[_index], usernames[_index], ipfsHashes[_index]);
+  }
 
+  function getAddressByIndex(uint _index)
+    public view indexIsAvailable(_index) returns (address)
+  {
     return addresses[_index];
   }
 
-  function getUsernameByIndex(uint _index) public view returns (bytes16) {
-    require(_index < addresses.length);
-
+  function getUsernameByIndex(uint _index)
+    public view indexIsAvailable(_index) returns (bytes16)
+  {
     return usernames[_index];
   }
 
-  function getIpfsHashByIndex(uint _index) public view returns (bytes) {
-    require(_index < addresses.length);
-
+  function getIpfsHashByIndex(uint _index)
+    public view indexIsAvailable(_index) returns (bytes)
+  {
     return ipfsHashes[_index];
   }
 

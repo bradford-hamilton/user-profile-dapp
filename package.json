@@ -1,5 +1,5 @@
 {
-  "name": "User Profile Dapp",
+  "name": "UserProfileDapp",
   "version": "0.0.1",
   "description": "User profile dapp using ipfs",
   "scripts": {
