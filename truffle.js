@@ -1,4 +1,3 @@
-// Allows ES6 in migrations and tests.
 require('babel-register');
 
 module.exports = {
