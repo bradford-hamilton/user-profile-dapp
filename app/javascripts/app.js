@@ -4,31 +4,31 @@ import contract from 'truffle-contract';
 import ipfsAPI from 'ipfs-api';
 import jQuery from 'jquery';
 import 'bootstrap';
-
 import userProfileAbi from '../../build/contracts/UserProfile.json';
 import '../stylesheets/app.scss';
 
-window.$ = window.jQuery = jQuery;
-
-var accounts;
-var account;
-var UserProfile = contract(userProfileAbi);
-
+const UserProfile = contract(userProfileAbi);
 // local node
 // const ipfs = ipfsAPI('localhost', '5001');
-const ipfs = ipfsAPI('ipfs.infura.io', '5001', {protocol: 'https'});
+const ipfs = ipfsAPI('ipfs.infura.io', '5001', { protocol: 'https' });
+let accounts;
+let account;
+
+window.$ = window.jQuery = jQuery;
 
 window.App = {
-  start: function() {
-    var self = this;
+  start() {
+    const self = this;
 
-    ipfs.id(function(err, res) {
+    ipfs.id((err, res) => {
       if (err) throw err
-      console.log('Connected to IPFS node!', res.id, res.agentVersion, res.protocolVersion);
+      console.log(`
+        Connected to IPFS node! ${res.id}, ${res.agentVersion}, ${res.protocolVersion}
+      `);
     });
 
     // Get the initial account balance so it can be displayed.
-    web3.eth.getAccounts(function(err, accs) {
+    web3.eth.getAccounts((err, accs) => {
       if (err !== null) {
         alert('There was an error fetching your accounts.');
         return;
@@ -43,11 +43,11 @@ window.App = {
       account = accounts[0];
       UserProfile.setProvider(web3.currentProvider);
 
-      var ethAddressIput = $('#sign-up-eth-address').val(accounts[0]);
+      const ethAddressIput = $('#sign-up-eth-address').val(accounts[0]);
 
       $('#sign-up-button')
-        .click(function(e) {
-          e.preventDefault();
+        .click((event) => {
+          event.preventDefault();
           self.createUser();
           return false;
         });
@@ -56,104 +56,102 @@ window.App = {
     });
   },
 
-  createUser: function() {
-    var username = $('#sign-up-username').val();
-    var title = $('#sign-up-title').val();
-    var intro = $('#sign-up-intro').val();
-    var ipfsHash = 'none';
-    var app;
+  createUser() {
+    const username = $('#sign-up-username').val();
+    const title = $('#sign-up-title').val();
+    const intro = $('#sign-up-intro').val();
+    let ipfsHash = '';
+    const userJson = {
+      username: username,
+      title: title,
+      intro: intro
+    };
+    const buffer = [Buffer.from(JSON.stringify(userJson))];
+    let app;
 
-    console.log('Creating user: ', username, title, intro, ipfsHash);
+    ipfs.add(buffer, (err, res) => {
+      if (err) throw err
+      ipfsHash = res[0].hash
 
-    UserProfile.deployed()
-      .then(function(instance) {
-        instance.createUser(username, ipfsHash, { gas: 200000, from: web3.eth.accounts[0] })
-          .then(function() {
-            console.log('Great Success!');
-          })
-          .catch(function(error) {
-            console.log('Error: ', error);
-          });
+      UserProfile.deployed()
+        .then((instance) => {
+          instance.createUser(
+            username,
+            ipfsHash,
+            { gas: 200000, from: web3.eth.accounts[0] }
+          )
+          .then(() => console.log('Great Success!'))
+          .catch((error) => console.log('Error: ', error));
+        });
     });
   },
 
-  getSingleUser: function(instance, i) {
-    var instanceUsed = instance;
-    var username;
-    var ipfsHash;
-    var address;
-    var userCardId = 'user-card-' + i;
+  getSingleUser(instance, i) {
+    const instanceUsed = instance;
+    const userCardId = `user-card-${i}`;
+    let username;
+    let ipfsHash;
+    let address;
 
     return instanceUsed.getUsernameByIndex.call(i)
-      .then(function(_username) {
-        console.log('username:', username = web3.toAscii(_username), i);
-        $('#' + userCardId).find('.card-title').text(username);
+      .then((username) => {
+        $(`#${userCardId}`).find('.card-title').text(username);
 
         return instanceUsed.getIpfsHashByIndex.call(i);
       })
-      .then(function(_ipfsHash) {
-        console.log('ipfsHash:', ipfsHash = web3.toAscii(_ipfsHash), i);
+      .then((ipfsHash) => {
+        const asciiHash = web3.toAscii(ipfsHash);
 
-        if (ipfsHash !== 'none') {
-          var url = 'https://ipfs.io/ipfs/' + ipfsHash;
+        if (asciiHash !== 'none') {
+          const url = `https://ipfs.io/ipfs/${asciiHash}`;
 
-          console.log('getting user info from', url);
-
-          $.getJSON(url, function(userJson) {
-            console.log('got user info from ipfs', userJson);
-            $('#' + userCardId).find('.card-subtitle').text(userJson.title);
-            $('#' + userCardId).find('.card-text').text(userJson.intro);
+          $.getJSON(url, (userJson) => {
+            $(`#${userCardId}`).find('.card-subtitle').text(userJson.title);
+            $(`#${userCardId}`).find('.card-text').text(userJson.intro);
           });
         }
 
         return instanceUsed.getAddressByIndex.call(i);
       })
-      .then(function(_address) {
-        console.log('address:', address = _address, i);
-        $('#' + userCardId).find('.card-eth-address').text(address);
+      .then((resAddress) => {
+        address = resAddress;
+        $(`#${userCardId}`).find('.card-eth-address').text(address);
 
         return true;
       })
-      .catch(function(error) {
-        // There was an error! Handle it.
-        console.log('error getting user #', i, ':', error);
-      });
+      .catch((error) => console.log(`Error getting user #${i}: ${error}`));
   },
 
-  getUsers: function() {
-    var self = this;
-    var instanceUsed;
+  getUsers() {
+    const self = this;
+    let instanceUsed;
 
     UserProfile.deployed()
-      .then(function(contractInstance) {
-
+      .then((contractInstance) => {
         instanceUsed = contractInstance;
 
         return instanceUsed.getUserCount.call();
-
       })
-      .then(function(userCount) {
+      .then((userCount) => {
         userCount = userCount.toNumber();
 
-        console.log('User count', userCount);
-
-        var rowCount = 0;
-        var usersDiv = $('#users-div');
-        var currentRow;
+        const usersDiv = $('#users-div');
+        let rowCount = 0;
+        let currentRow;
 
         for (var i = 0; i < userCount; i++) {
-          var userCardId = 'user-card-' + i;
+          const userCardId = `user-card-${i}`;
 
-          if(i % 4 == 0) {
-            var currentRowId = 'user-row-' + rowCount;
-            var userRowTemplate = '<div class="row" id="' + currentRowId + '"></div>';
+          if (i % 4 == 0) {
+            const currentRowId = `user-row-${rowCount}`;
+            const userRowTemplate = `<div class="row" id="${currentRowId}"></div>`;
             usersDiv.append(userRowTemplate);
-            currentRow = $('#' + currentRowId);
+            currentRow = $(`#${currentRowId}`);
             rowCount++;
           }
 
           var userTemplate = `
-            <div class="col-lg-3 mt-1 mb-1" id="` + userCardId + `">
+            <div class="col-lg-3 mt-1 mb-1" id="${userCardId}">
               <div class="card bg-gradient-primary text-white card-profile p-1">
                 <div class="card-body">
                   <h5 class="card-title"></h5>
@@ -164,11 +162,10 @@ window.App = {
                   </p>
                 </div>
               </div>
-            </div>`;
+            </div>
+          `;
           currentRow.append(userTemplate);
         }
-
-        console.log("getting users...");
 
         for (var i = 0; i < userCount; i++) {
           self.getSingleUser(instanceUsed, i);
@@ -177,7 +174,7 @@ window.App = {
   },
 };
 
-window.addEventListener('load', function() {
+window.addEventListener('load', () => {
   // Checking if Web3 has been injected by the browser (Mist/MetaMask)
   if (typeof web3 !== 'undefined') {
     console.warn(`

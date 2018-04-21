@@ -1,1 +1,1 @@
-###### User Profile App using ipfs and some older out of date js/web3 based on this [tutorial](https://medium.com/@sebinatx/building-a-fully-decentralized-user-profile-dapp-on-ethereum-and-ipfs-e55afac35718) with some updates/fixes to it
+###### User Profile App storing data on ipfs. Originally had older out of date js based on this [tutorial](https://medium.com/@sebinatx/building-a-fully-decentralized-user-profile-dapp-on-ethereum-and-ipfs-e55afac35718). Updated some of the app and js, however still on web3 < 1, uses jquery, etc
